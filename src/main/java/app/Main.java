@@ -1,6 +1,7 @@
 package app;
 
-import java.io.File;
+import java.io.*;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -10,8 +11,12 @@ public class Main {
     private static String customPath = null;
     private static boolean fullInfo = false;
     private static boolean shortInfo = false;
+    private static boolean isAnyLineSkipped = false;
     private static boolean addToExistingFile = false;
     private static ArrayList<File> files = new ArrayList<>();
+    private static ArrayList<String> floatArray = new ArrayList<>();
+    private static ArrayList<String> intArray = new ArrayList<>();
+    private static ArrayList<String> strArray = new ArrayList<>();
 
     public static void main(String[] args) {
         try {
@@ -21,9 +26,45 @@ public class Main {
             System.out.println(e.getMessage());
             System.exit(0);
         }
-        System.out.println("Done");
 
 
+        for (File file : files) {
+            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                while (reader.ready()) {
+                    parseLine(reader.readLine());
+                }
+            } catch (FileNotFoundException e) {
+                System.out.println("Файл не найден");
+                System.exit(0);
+            } catch (IOException e) {
+                System.out.println("Ошибка чтения файла");
+                System.exit(0);
+            }
+        }
+        if (isAnyLineSkipped) {
+            System.out.println("Одна или несколько строк были пропущенны из-за их неверного формата");
+        }
+
+
+
+    }
+
+    private static void parseLine(String line) {
+        Pattern floatPattern = Pattern.compile("^-?\\d+\\.\\d+$");
+        Pattern intPattern = Pattern.compile("^-?\\d+$");
+        Pattern strPattern = Pattern.compile("^[A-Za-zА-яё ]+$");
+
+        Matcher floatMatcher = floatPattern.matcher(line);
+        Matcher intMatcher = intPattern.matcher(line);
+        Matcher strMatcher = strPattern.matcher(line);
+
+        if (floatMatcher.matches()) {
+            floatArray.add(line);
+        } else if (intMatcher.matches()) {
+            intArray.add(line);
+        } else if (strMatcher.matches()) {
+            strArray.add(line);
+        } else isAnyLineSkipped = true;
     }
 
     private static void parseArgs(String[] args) throws IllegalArgumentException {
@@ -63,3 +104,4 @@ public class Main {
 }
 
 //java -jar util.jar -s -f -a -o /some/path -p sample- in1.txt in2.txt
+//java -jar FilterFileContent.jar -s -a -p sample- in1.txt in2.txt
