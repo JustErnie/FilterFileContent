@@ -27,9 +27,9 @@ public class Main {
             System.exit(0);
         }
 
-
         for (File file : files) {
-            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            try (InputStream inputStream = Main.class.getResourceAsStream("/" + file.toString());
+                 BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, "Cp1251"))) {
                 while (reader.ready()) {
                     parseLine(reader.readLine());
                 }
@@ -41,18 +41,22 @@ public class Main {
                 System.exit(0);
             }
         }
+
         if (isAnyLineSkipped) {
-            System.out.println("Одна или несколько строк были пропущенны из-за их неверного формата");
+            System.out.println("Одна или несколько строк были пропущены из-за несоответствия ни одной категории");
         }
 
+        System.out.println(floatArray);
+        System.out.println(intArray);
+        System.out.println(strArray);
 
 
     }
 
     private static void parseLine(String line) {
-        Pattern floatPattern = Pattern.compile("^-?\\d+\\.\\d+$");
+        Pattern floatPattern = Pattern.compile("^-?\\d+\\.\\d+(E-?\\d+)?$");
         Pattern intPattern = Pattern.compile("^-?\\d+$");
-        Pattern strPattern = Pattern.compile("^[A-Za-zА-яё ]+$");
+        Pattern strPattern = Pattern.compile("^[A-Za-zА-я ]+$");
 
         Matcher floatMatcher = floatPattern.matcher(line);
         Matcher intMatcher = intPattern.matcher(line);
