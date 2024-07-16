@@ -1,22 +1,24 @@
 package app;
 
 import java.io.*;
-import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Main {
-    private static String prefix = null;
-    private static String customPath = null;
+    private static String prefix = "";
+    private static String customPath = "";
     private static boolean fullInfo = false;
     private static boolean shortInfo = false;
     private static boolean isAnyLineSkipped = false;
     private static boolean addToExistingFile = false;
-    private static ArrayList<File> files = new ArrayList<>();
-    private static ArrayList<String> floatArray = new ArrayList<>();
-    private static ArrayList<String> intArray = new ArrayList<>();
-    private static ArrayList<String> strArray = new ArrayList<>();
+    private static final ArrayList<File> files = new ArrayList<>();
+    private static final ArrayList<String> floatArray = new ArrayList<>();
+    private static final ArrayList<String> intArray = new ArrayList<>();
+    private static final ArrayList<String> strArray = new ArrayList<>();
 
     public static void main(String[] args) {
         try {
@@ -42,21 +44,43 @@ public class Main {
             }
         }
 
+        if (floatArray.isEmpty() | intArray.isEmpty() | strArray.isEmpty()) {
+            System.out.println("В файле/файлах нет подходящих строк");
+            System.exit(0);
+        }
+
         if (isAnyLineSkipped) {
             System.out.println("Одна или несколько строк были пропущены из-за несоответствия ни одной категории");
         }
 
-        System.out.println(floatArray);
-        System.out.println(intArray);
-        System.out.println(strArray);
+        String currentDirectory = Paths.get("").toAbsolutePath().toString();
+        String pathToSave = currentDirectory + customPath;
+        new File(pathToSave).mkdirs();
 
+        try {
+            if (addToExistingFile) {
+                Files.write(Paths.get(pathToSave + "\\" + prefix + "floats.txt"), floatArray,
+                        StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                Files.write(Paths.get(pathToSave + "\\" + prefix + "integers.txt"), intArray,
+                        StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                Files.write(Paths.get(pathToSave + "\\" + prefix + "strings.txt"), strArray,
+                        StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            } else {
+                Files.write(Paths.get(pathToSave + "\\" + prefix + "floats.txt"), floatArray);
+                Files.write(Paths.get(pathToSave + "\\" + prefix + "integers.txt"), intArray);
+                Files.write(Paths.get(pathToSave + "\\" + prefix + "strings.txt"), strArray);
+            }
+        } catch (IOException e) {
+            System.out.println("Ошибка записи файла");
+            System.exit(0);
+        }
 
     }
 
     private static void parseLine(String line) {
         Pattern floatPattern = Pattern.compile("^-?\\d+\\.\\d+(E-?\\d+)?$");
         Pattern intPattern = Pattern.compile("^-?\\d+$");
-        Pattern strPattern = Pattern.compile("^[A-Za-zА-я ]+$");
+        Pattern strPattern = Pattern.compile("^[A-Za-zА-яЁё ]+$");
 
         Matcher floatMatcher = floatPattern.matcher(line);
         Matcher intMatcher = intPattern.matcher(line);
@@ -85,8 +109,7 @@ public class Main {
                     break;
                 case "-o":
                     i++;
-                    validatePath(args[i]);
-                    customPath = args[i];
+                    customPath = validateAndTransformPath(args[i]);
                     break;
                 case "-p":
                     i++;
@@ -100,10 +123,11 @@ public class Main {
         }
     }
 
-    private static void validatePath(String path) throws IllegalArgumentException {
-        Pattern pattern = Pattern.compile("(/\\w+)+");
+    private static String validateAndTransformPath(String path) throws IllegalArgumentException {
+        Pattern pattern = Pattern.compile("((\\\\|/)[^\"\\\\/:|<>*?\\n]+)+");
         Matcher matcher = pattern.matcher(path);
         if (!matcher.matches()) throw new IllegalArgumentException("Неверный формат пути");
+        return path.replace('/', '\\');
     }
 }
 
