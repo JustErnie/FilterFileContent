@@ -1,6 +1,7 @@
 package app;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -11,10 +12,11 @@ import java.util.regex.Pattern;
 public class Main {
     private static String prefix = "";
     private static String customPath = "";
+    private static final String CURRENT_DIRECTORY = Paths.get("").toAbsolutePath().toString();
     private static boolean fullInfo = false;
     private static boolean shortInfo = false;
-    private static boolean isAnyLineSkipped = false;
     private static boolean addToExistingFile = false;
+    private static boolean isAnyLineSkipped = false;
     private static final ArrayList<File> files = new ArrayList<>();
     private static final ArrayList<String> floatArray = new ArrayList<>();
     private static final ArrayList<String> intArray = new ArrayList<>();
@@ -30,8 +32,7 @@ public class Main {
         }
 
         for (File file : files) {
-            try (InputStream inputStream = Main.class.getResourceAsStream("/" + file.toString());
-                 BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, "Cp1251"))) {
+            try (BufferedReader reader = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
                 while (reader.ready()) {
                     parseLine(reader.readLine());
                 }
@@ -44,7 +45,7 @@ public class Main {
             }
         }
 
-        if (floatArray.isEmpty() | intArray.isEmpty() | strArray.isEmpty()) {
+        if (floatArray.isEmpty() & intArray.isEmpty() & strArray.isEmpty()) {
             System.out.println("В файле/файлах нет подходящих строк");
             System.exit(0);
         }
@@ -53,22 +54,32 @@ public class Main {
             System.out.println("Одна или несколько строк были пропущены из-за несоответствия ни одной категории");
         }
 
-        String currentDirectory = Paths.get("").toAbsolutePath().toString();
-        String pathToSave = currentDirectory + customPath;
+        String pathToSave = CURRENT_DIRECTORY + customPath;
         new File(pathToSave).mkdirs();
-
         try {
             if (addToExistingFile) {
-                Files.write(Paths.get(pathToSave + "\\" + prefix + "floats.txt"), floatArray,
-                        StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-                Files.write(Paths.get(pathToSave + "\\" + prefix + "integers.txt"), intArray,
-                        StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-                Files.write(Paths.get(pathToSave + "\\" + prefix + "strings.txt"), strArray,
-                        StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                if (!floatArray.isEmpty()) {
+                    Files.write(Paths.get(pathToSave + "\\" + prefix + "floats.txt"), floatArray,
+                            StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                }
+                if(!intArray.isEmpty()) {
+                    Files.write(Paths.get(pathToSave + "\\" + prefix + "integers.txt"), intArray,
+                            StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                }
+                if (!strArray.isEmpty()) {
+                    Files.write(Paths.get(pathToSave + "\\" + prefix + "strings.txt"), strArray,
+                            StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                }
             } else {
-                Files.write(Paths.get(pathToSave + "\\" + prefix + "floats.txt"), floatArray);
-                Files.write(Paths.get(pathToSave + "\\" + prefix + "integers.txt"), intArray);
-                Files.write(Paths.get(pathToSave + "\\" + prefix + "strings.txt"), strArray);
+                if (!floatArray.isEmpty()) {
+                    Files.write(Paths.get(pathToSave + "\\" + prefix + "floats.txt"), floatArray);
+                }
+                if (!intArray.isEmpty()) {
+                    Files.write(Paths.get(pathToSave + "\\" + prefix + "integers.txt"), intArray);
+                }
+                if (!strArray.isEmpty()) {
+                    Files.write(Paths.get(pathToSave + "\\" + prefix + "strings.txt"), strArray);
+                }
             }
         } catch (IOException e) {
             System.out.println("Ошибка записи файла");
@@ -117,14 +128,14 @@ public class Main {
                     break;
                 default:
                     if (args[i].endsWith(".txt")) {
-                        files.add(new File(args[i]));
+                        files.add(new File(CURRENT_DIRECTORY + "\\" + args[i]));
                     } else throw new IllegalArgumentException("Неверный формат файла или неверные аргументы");
             }
         }
     }
 
     private static String validateAndTransformPath(String path) throws IllegalArgumentException {
-        Pattern pattern = Pattern.compile("((\\\\|/)[^\"\\\\/:|<>*?\\n]+)+");
+        Pattern pattern = Pattern.compile("(([\\\\/])[^\"\\\\/:|<>*?\\n]+)+");
         Matcher matcher = pattern.matcher(path);
         if (!matcher.matches()) throw new IllegalArgumentException("Неверный формат пути");
         return path.replace('/', '\\');
@@ -133,3 +144,6 @@ public class Main {
 
 //java -jar util.jar -s -f -a -o /some/path -p sample- in1.txt in2.txt
 //java -jar FilterFileContent.jar -s -a -p sample- in1.txt in2.txt
+
+// *.txt must be in UTF-8
+
