@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -23,11 +24,10 @@ public class Main {
     private static final ArrayList<String> strArray = new ArrayList<>();
 
     public static void main(String[] args) {
-        try {
-            parseArgs(args);
-        }
-        catch (IllegalArgumentException e) {
-            System.out.println(e.getMessage());
+        parseArgs(args);
+
+        if (files.isEmpty()) {
+            System.out.println("Не было передано ни одного файла в формате *.txt");
             System.exit(0);
         }
 
@@ -38,10 +38,8 @@ public class Main {
                 }
             } catch (FileNotFoundException e) {
                 System.out.println("Файл не найден");
-                System.exit(0);
             } catch (IOException e) {
                 System.out.println("Ошибка чтения файла");
-                System.exit(0);
             }
         }
 
@@ -86,6 +84,70 @@ public class Main {
             System.exit(0);
         }
 
+        if (fullInfo) {
+            printFullInfo();
+        } else if (shortInfo) {
+            printSortInfo();
+        }
+    }
+
+    private static void printFullInfo() {
+        if (!floatArray.isEmpty()) {
+            ArrayList<Float> actualFloats = new ArrayList<>();
+            floatArray.forEach(n -> actualFloats.add(Float.parseFloat(n)));
+
+            float floatMax = actualFloats.stream().max(Comparator.naturalOrder()).get();
+            float floatMin = actualFloats.stream().min(Comparator.naturalOrder()).get();
+            double floatAvg = actualFloats.stream().mapToDouble(Float::doubleValue).average().getAsDouble();
+            float floatSum = actualFloats.stream().reduce(0f, Float::sum);
+
+            printShortFloatInfo();
+
+
+        }
+        if (!intArray.isEmpty()) {
+            ArrayList<Long> actualIntegers = new ArrayList<>();
+            intArray.forEach(n -> actualIntegers.add(Long.parseLong(n)));
+
+            long intMax = actualIntegers.stream().max(Comparator.naturalOrder()).get();
+            long intMin = actualIntegers.stream().min(Comparator.naturalOrder()).get();
+            double intAvg = actualIntegers.stream().mapToDouble(Long::doubleValue).average().getAsDouble();
+            long intSum = actualIntegers.stream().reduce(0L, Long::sum);
+
+            printShortIntInfo();
+
+
+        }
+    }
+
+    private static void printSortInfo() {
+        if (!floatArray.isEmpty()) {
+            printShortFloatInfo();
+        }
+        if (!intArray.isEmpty()) {
+            printShortIntInfo();
+        }
+        if (!strArray.isEmpty()) {
+            printShortStrInfo();
+        }
+    }
+
+    private static void printShortStrInfo() {
+        System.out.printf("%s было сохранено в %s\n",
+                fixNoun(strArray.size(), "строка", "строки", "строк"),
+                prefix + "strings.txt");
+    }
+
+    private static void printShortIntInfo() {
+        System.out.printf("%s было сохранено в %s\n",
+                fixNoun(intArray.size(), "целое число", "целых числа", "целых чисел"),
+                prefix + "integers.txt");
+    }
+
+    private static void printShortFloatInfo() {
+        System.out.printf("%s с плавающей запятой было сохранено в %s\n",
+                fixNoun(floatArray.size(), "число", "числа", "чисел"),
+                prefix + "floats.txt");
     }
 
     private static void parseLine(String line) {
@@ -106,7 +168,7 @@ public class Main {
         } else isAnyLineSkipped = true;
     }
 
-    private static void parseArgs(String[] args) throws IllegalArgumentException {
+    private static void parseArgs(String[] args) {
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
                 case "-s":
@@ -120,7 +182,9 @@ public class Main {
                     break;
                 case "-o":
                     i++;
-                    customPath = validateAndTransformPath(args[i]);
+                    try {
+                        customPath = validateAndTransformPath(args[i]);
+                    } catch (IllegalArgumentException ignored) {}
                     break;
                 case "-p":
                     i++;
@@ -129,7 +193,11 @@ public class Main {
                 default:
                     if (args[i].endsWith(".txt")) {
                         files.add(new File(CURRENT_DIRECTORY + "\\" + args[i]));
-                    } else throw new IllegalArgumentException("Неверный формат файла или неверные аргументы");
+                    }
+                    /*
+                    TODO Сделать так, чтобы программа продолжала работать с кривыми аргументами
+                     (Несколько кастомных путей, неверные файлы)
+                     */
             }
         }
     }
@@ -137,8 +205,24 @@ public class Main {
     private static String validateAndTransformPath(String path) throws IllegalArgumentException {
         Pattern pattern = Pattern.compile("(([\\\\/])[^\"\\\\/:|<>*?\\n]+)+");
         Matcher matcher = pattern.matcher(path);
-        if (!matcher.matches()) throw new IllegalArgumentException("Неверный формат пути");
-        return path.replace('/', '\\');
+        if (matcher.matches()) {
+            return path.replace('/', '\\');
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    private static String fixNoun(int quantity, String formFor1, String formFor2, String formFor5) {
+        String result;
+        int num100 = quantity % 100;
+        if(num100 > 4 && num100 < 21) result = formFor5;
+        else {
+            int num10 = num100 % 10;
+            if (num10 == 1) result = formFor1;
+            else if (num10 > 1 && num10 < 5) result = formFor2;
+            else result = formFor5;
+        }
+        return quantity + " " + result;
     }
 }
 
