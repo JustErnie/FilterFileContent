@@ -18,6 +18,7 @@ public class Main {
     private static boolean shortInfo = false;
     private static boolean addToExistingFile = false;
     private static boolean isAnyLineSkipped = false;
+    private static boolean isFileNotFound = false;
     private static final ArrayList<File> files = new ArrayList<>();
     private static final ArrayList<String> floatArray = new ArrayList<>();
     private static final ArrayList<String> intArray = new ArrayList<>();
@@ -37,12 +38,15 @@ public class Main {
                     parseLine(reader.readLine());
                 }
             } catch (FileNotFoundException e) {
-                System.out.println("Файл не найден");
+                isFileNotFound = true;
             } catch (IOException e) {
                 System.out.println("Ошибка чтения файла");
             }
         }
 
+        if (isFileNotFound) {
+            System.out.println("Один или несколько файлов не удалось найти");
+        }
         if (floatArray.isEmpty() & intArray.isEmpty() & strArray.isEmpty()) {
             System.out.println("В файле/файлах нет подходящих строк");
             System.exit(0);
@@ -53,7 +57,15 @@ public class Main {
         }
 
         String pathToSave = CURRENT_DIRECTORY + customPath;
-        new File(pathToSave).mkdirs();
+        try {
+            new File(pathToSave).mkdirs();
+        } catch (Exception e) {
+            System.out.println("Результат будет сохранён в текущей директории, так как создать новую не удалось");
+            pathToSave = CURRENT_DIRECTORY;
+        }
+
+        System.out.println();
+
         try {
             if (addToExistingFile) {
                 if (!floatArray.isEmpty()) {
@@ -91,82 +103,6 @@ public class Main {
         }
     }
 
-    private static void printFullInfo() {
-        if (!floatArray.isEmpty()) {
-            ArrayList<Float> actualFloats = new ArrayList<>();
-            floatArray.forEach(n -> actualFloats.add(Float.parseFloat(n)));
-
-            float floatMax = actualFloats.stream().max(Comparator.naturalOrder()).get();
-            float floatMin = actualFloats.stream().min(Comparator.naturalOrder()).get();
-            double floatAvg = actualFloats.stream().mapToDouble(Float::doubleValue).average().getAsDouble();
-            float floatSum = actualFloats.stream().reduce(0f, Float::sum);
-
-            printShortFloatInfo();
-
-
-        }
-        if (!intArray.isEmpty()) {
-            ArrayList<Long> actualIntegers = new ArrayList<>();
-            intArray.forEach(n -> actualIntegers.add(Long.parseLong(n)));
-
-            long intMax = actualIntegers.stream().max(Comparator.naturalOrder()).get();
-            long intMin = actualIntegers.stream().min(Comparator.naturalOrder()).get();
-            double intAvg = actualIntegers.stream().mapToDouble(Long::doubleValue).average().getAsDouble();
-            long intSum = actualIntegers.stream().reduce(0L, Long::sum);
-
-            printShortIntInfo();
-
-
-        }
-    }
-
-    private static void printSortInfo() {
-        if (!floatArray.isEmpty()) {
-            printShortFloatInfo();
-        }
-        if (!intArray.isEmpty()) {
-            printShortIntInfo();
-        }
-        if (!strArray.isEmpty()) {
-            printShortStrInfo();
-        }
-    }
-
-    private static void printShortStrInfo() {
-        System.out.printf("%s было сохранено в %s\n",
-                fixNoun(strArray.size(), "строка", "строки", "строк"),
-                prefix + "strings.txt");
-    }
-
-    private static void printShortIntInfo() {
-        System.out.printf("%s было сохранено в %s\n",
-                fixNoun(intArray.size(), "целое число", "целых числа", "целых чисел"),
-                prefix + "integers.txt");
-    }
-
-    private static void printShortFloatInfo() {
-        System.out.printf("%s с плавающей запятой было сохранено в %s\n",
-                fixNoun(floatArray.size(), "число", "числа", "чисел"),
-                prefix + "floats.txt");
-    }
-
-    private static void parseLine(String line) {
-        Pattern floatPattern = Pattern.compile("^-?\\d+\\.\\d+(E-?\\d+)?$");
-        Pattern intPattern = Pattern.compile("^-?\\d+$");
-        Pattern strPattern = Pattern.compile("^[A-Za-zА-яЁё ]+$");
-
-        Matcher floatMatcher = floatPattern.matcher(line);
-        Matcher intMatcher = intPattern.matcher(line);
-        Matcher strMatcher = strPattern.matcher(line);
-
-        if (floatMatcher.matches()) {
-            floatArray.add(line);
-        } else if (intMatcher.matches()) {
-            intArray.add(line);
-        } else if (strMatcher.matches()) {
-            strArray.add(line);
-        } else isAnyLineSkipped = true;
-    }
 
     private static void parseArgs(String[] args) {
         for (int i = 0; i < args.length; i++) {
@@ -194,10 +130,6 @@ public class Main {
                     if (args[i].endsWith(".txt")) {
                         files.add(new File(CURRENT_DIRECTORY + "\\" + args[i]));
                     }
-                    /*
-                    TODO Сделать так, чтобы программа продолжала работать с кривыми аргументами
-                     (Несколько кастомных путей, неверные файлы)
-                     */
             }
         }
     }
@@ -210,6 +142,98 @@ public class Main {
         } else {
             throw new IllegalArgumentException();
         }
+    }
+
+    private static void parseLine(String line) {
+        Pattern floatPattern = Pattern.compile("^-?\\d+\\.\\d+(E-?\\d+)?$");
+        Pattern intPattern = Pattern.compile("^-?\\d+$");
+        Pattern strPattern = Pattern.compile("^[A-Za-zА-яЁё ]+$");
+
+        Matcher floatMatcher = floatPattern.matcher(line);
+        Matcher intMatcher = intPattern.matcher(line);
+        Matcher strMatcher = strPattern.matcher(line);
+
+        if (floatMatcher.matches()) {
+            floatArray.add(line);
+        } else if (intMatcher.matches()) {
+            intArray.add(line);
+        } else if (strMatcher.matches()) {
+            strArray.add(line);
+        } else isAnyLineSkipped = true;
+    }
+
+    private static void printSortInfo() {
+        if (!floatArray.isEmpty()) {
+            printShortFloatInfo();
+        }
+        if (!intArray.isEmpty()) {
+            printShortIntInfo();
+        }
+        if (!strArray.isEmpty()) {
+            printShortStrInfo();
+        }
+    }
+
+    private static void printFullInfo() {
+        if (!floatArray.isEmpty()) {
+            ArrayList<Float> actualFloats = new ArrayList<>();
+            floatArray.forEach(n -> actualFloats.add(Float.parseFloat(n)));
+
+            float floatMax = actualFloats.stream().max(Comparator.naturalOrder()).get();
+            float floatMin = actualFloats.stream().min(Comparator.naturalOrder()).get();
+            double floatAvg = actualFloats.stream().mapToDouble(Float::doubleValue).average().getAsDouble();
+            float floatSum = actualFloats.stream().reduce(0f, Float::sum);
+
+            printShortFloatInfo();
+            System.out.println("Максимальное число: " + floatMax);
+            System.out.println("Минимальное число: " + floatMin);
+            System.out.println("Среднее значение: " + floatAvg);
+            System.out.println("Сумма чисел: " + floatSum);
+            System.out.println();
+        }
+        if (!intArray.isEmpty()) {
+            ArrayList<Long> actualIntegers = new ArrayList<>();
+            intArray.forEach(n -> actualIntegers.add(Long.parseLong(n)));
+
+            long intMax = actualIntegers.stream().max(Comparator.naturalOrder()).get();
+            long intMin = actualIntegers.stream().min(Comparator.naturalOrder()).get();
+            double intAvg = actualIntegers.stream().mapToDouble(Long::doubleValue).average().getAsDouble();
+            long intSum = actualIntegers.stream().reduce(0L, Long::sum);
+
+            printShortIntInfo();
+            System.out.println("Максимальное число: " + intMax);
+            System.out.println("Минимальное число: " + intMin);
+            System.out.println("Среднее значение: " + intAvg);
+            System.out.println("Сумма чисел: " + intSum);
+            System.out.println();
+        }
+        if (!strArray.isEmpty()) {
+            Comparator<String> comparator = Comparator.comparingInt(String::length);
+            String longestStr = strArray.stream().max(comparator).get();
+            String shortestStr = strArray.stream().min(comparator).get();
+
+            printShortStrInfo();
+            System.out.println("Самая длинная строка: " + longestStr);
+            System.out.println("Самая короткая строка: " + shortestStr);
+        }
+    }
+
+    private static void printShortStrInfo() {
+        System.out.printf("%s было сохранено в %s\n",
+                fixNoun(strArray.size(), "строка", "строки", "строк"),
+                prefix + "strings.txt");
+    }
+
+    private static void printShortIntInfo() {
+        System.out.printf("%s было сохранено в %s\n",
+                fixNoun(intArray.size(), "целое число", "целых числа", "целых чисел"),
+                prefix + "integers.txt");
+    }
+
+    private static void printShortFloatInfo() {
+        System.out.printf("%s с плавающей запятой было сохранено в %s\n",
+                fixNoun(floatArray.size(), "число", "числа", "чисел"),
+                prefix + "floats.txt");
     }
 
     private static String fixNoun(int quantity, String formFor1, String formFor2, String formFor5) {
@@ -226,8 +250,9 @@ public class Main {
     }
 }
 
-//java -jar util.jar -s -f -a -o /some/path -p sample- in1.txt in2.txt
-//java -jar FilterFileContent.jar -s -a -p sample- in1.txt in2.txt
-
-// *.txt must be in UTF-8
+/*
+Передаваемые файлы должны быть в фомате *.txt и использовать кодировку UTF-8
+Путь к новой папке должен быть без пробелов
+Целые числа и числа с плавающей запятой не должны выходить за диапазон значений Long и Float соответственно
+ */
 
